@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useStreamingChat } from "../hooks/useStreamingChat";
 import { ChatMessage } from "../lib/chatState";
 import { renderMarkdown } from "../lib/markdown";
-import { tokenize } from "../lib/citations";
+import { safeHref, tokenize } from "../lib/citations";
 
 interface CitationLinkProps {
   label: string;
@@ -12,14 +12,18 @@ interface CitationLinkProps {
 function CitationLink({ label, msg }: CitationLinkProps) {
   const c = msg.citations.find((x) => x.label === label);
   if (!c) return <sup className="cite cite-missing">[{label}]</sup>;
+  const title = c.snippet ?? c.id;
+  // Citations arrive from the stream; only http(s) URLs become links.
+  const href = safeHref(c.href);
+  if (!href) {
+    return (
+      <sup className="cite" title={title}>
+        [{label}]
+      </sup>
+    );
+  }
   return (
-    <a
-      className="cite"
-      href={c.href ?? "#"}
-      target={c.href ? "_blank" : undefined}
-      rel="noreferrer"
-      title={c.snippet ?? c.id}
-    >
+    <a className="cite" href={href} target="_blank" rel="noreferrer" title={title}>
       <sup>[{label}]</sup>
     </a>
   );

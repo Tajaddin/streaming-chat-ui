@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findMarkers, tokenize } from "../src/lib/citations";
+import { findMarkers, safeHref, tokenize } from "../src/lib/citations";
 
 describe("citations", () => {
   it("findMarkers returns empty for plain text", () => {
@@ -28,5 +28,29 @@ describe("citations", () => {
 
   it("tokenize returns [] for empty input", () => {
     expect(tokenize("")).toEqual([]);
+  });
+
+  it("safeHref keeps absolute http and https URLs", () => {
+    expect(safeHref("https://example.com/doc?x=1")).toBe("https://example.com/doc?x=1");
+    expect(safeHref("http://example.com")).toBe("http://example.com/");
+  });
+
+  it("safeHref drops script, data and other schemes", () => {
+    for (const href of [
+      "javascript:alert(1)",
+      " JaVaScRiPt:alert(1)",
+      "java\tscript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "vbscript:msgbox(1)",
+      "file:///etc/passwd",
+    ]) {
+      expect(safeHref(href)).toBeUndefined();
+    }
+  });
+
+  it("safeHref drops relative paths and missing values", () => {
+    expect(safeHref("docs/a.md")).toBeUndefined();
+    expect(safeHref("")).toBeUndefined();
+    expect(safeHref(undefined)).toBeUndefined();
   });
 });
