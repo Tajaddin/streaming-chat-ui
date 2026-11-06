@@ -18,6 +18,20 @@ describe("renderMarkdown", () => {
     expect(renderMarkdown("use `npm` here")).toContain("<code>npm</code>");
   });
 
+  it("escapes inline code exactly once", () => {
+    expect(renderMarkdown("compare `a<b && c` here")).toContain(
+      "<code>a&lt;b &amp;&amp; c</code>",
+    );
+  });
+
+  it("leaves emphasis markers inside inline code alone", () => {
+    expect(renderMarkdown("set `x = a*b*c` first")).toContain("<code>x = a*b*c</code>");
+  });
+
+  it("keeps inline code inside emphasis", () => {
+    expect(renderMarkdown("*run `ls` now*")).toContain("<em>run <code>ls</code> now</em>");
+  });
+
   it("renders ```code fences```", () => {
     const html = renderMarkdown("```\nprint('x')\n```");
     expect(html).toContain('<pre class="code-block"');

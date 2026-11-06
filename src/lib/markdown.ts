@@ -22,14 +22,18 @@ function escape(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ESC[c]);
 }
 
+// `s` is already escaped. Code spans are swapped for placeholders while
+// emphasis is applied, so their content is left alone, then put back.
 function renderInline(s: string): string {
-  // inline code first so its content is left alone
-  s = s.replace(/`([^`]+)`/g, (_m, body) => `<code>${escape(body)}</code>`);
+  const code: string[] = [];
+  s = s.replace(/`([^`]+)`/g, (_m, body) => `\u0000${code.push(body) - 1}\u0000`);
   // bold
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   // italic (single * but not ** which is already consumed)
   s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
-  return s;
+  return s.replace(/\u0000(\d+)\u0000/g, (m, i) =>
+    Number(i) < code.length ? `<code>${code[Number(i)]}</code>` : m,
+  );
 }
 
 export function renderMarkdown(input: string): string {
