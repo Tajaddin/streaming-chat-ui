@@ -1,8 +1,8 @@
 # streaming-chat-ui
 
-> Production-shaped React + SSE chat: incremental markdown rendering, footnote-style citations, abort + regenerate, in-place message editing. **37/37 tests pass** across a pure-function reducer, an incremental SSE parser, a streaming-safe markdown renderer, and a real hook integration test (fake transport, real reducer + parser). Includes a Node SSE dev server (mock + Anthropic backends) and a TTFB benchmark.
+> Production-shaped React + SSE chat: incremental markdown rendering, footnote-style citations, abort + regenerate, in-place message editing. **44/44 tests pass** across a pure-function reducer, an incremental SSE parser, a streaming-safe markdown renderer, and a real hook integration test (fake transport, real reducer + parser). Includes a Node SSE dev server (mock + Anthropic backends) and a TTFB benchmark.
 
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Tests](https://img.shields.io/badge/tests-37%20passing-brightgreen)](#tests) [![React](https://img.shields.io/badge/react-18-blue)]() [![TypeScript](https://img.shields.io/badge/typescript-5-blue)]()
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Tests](https://img.shields.io/badge/tests-44%20passing-brightgreen)](#tests) [![React](https://img.shields.io/badge/react-18-blue)]() [![TypeScript](https://img.shields.io/badge/typescript-5-blue)]()
 
 ## What's actually here
 
@@ -108,7 +108,7 @@ The dev server (and the contract the hook expects) uses three event types:
 | Event | Data | Meaning |
 |---|---|---|
 | `token` | text chunk | Append to the assistant's content. (`message` is also accepted as an alias.) |
-| `citation` | JSON `{label, id, href?, snippet?}` | Add one citation entry the UI renders as `<sup>[N]</sup>` |
+| `citation` | JSON `{label, id, href?, snippet?}` | Add one citation entry the UI renders as `<sup>[N]</sup>`, linked only when `href` is an absolute http(s) URL |
 | `done` | (empty) | Stream completed cleanly; transition to `complete` |
 | `error` | error message | Stream failed; transition to `error` with the payload |
 
@@ -121,13 +121,14 @@ npm test
 ```
 
 ```
-tests/citations.test.ts        5 passed   markers + tokenize spans
+tests/citations.test.ts        8 passed   markers + tokenize spans + safe hrefs
 tests/sseParser.test.ts        9 passed   one event / multi-event / chunk-split / CR / comments / leading space / id
-tests/markdown.test.ts         7 passed   escape / bold / italic / code / fences / streaming / paragraphs
+tests/markdown.test.ts        10 passed   escape / bold / italic / code (escaped once, no emphasis inside) / fences / streaming / paragraphs
 tests/chatState.test.ts       11 passed   every action + ttfbMs helper
 tests/useStreamingChat.test.tsx  5 passed   happy path / citation event / SSE error event / non-200 / regenerate
+tests/Chat.test.tsx            1 passed   only http(s) citations render as links
 ─────────────────────────────────────────────
-37 passed in 2.3s
+44 passed
 ```
 
 `useStreamingChat.test.tsx` is the most interesting one: it constructs a fake `fetch` that returns a `ReadableStream` enqueueing the SSE bytes in 16-char chunks. That exercises the parser's chunk-boundary handling end-to-end through the real React hook, with no mocked internals.
@@ -168,7 +169,7 @@ The protocol is the same; the only change is what feeds the `token` events.
 │   ├── components/Chat.tsx     # the chat surface
 │   ├── App.tsx / main.tsx
 │   └── server/server.ts        # Node SSE dev server (mock + Anthropic)
-├── tests/                      # 5 files, 37 cases
+├── tests/                      # 6 files, 44 cases
 └── bench/ttfb.mjs              # TTFB benchmark
 ```
 
@@ -178,7 +179,7 @@ The protocol is the same; the only change is what feeds the `token` events.
 
 **No retry / backoff on network errors.** A 502 is shown to the user; we don't retry. Strategy is application-specific (some retries should be silent, some shouldn't) so it's left out.
 
-**Markdown subset, not full CommonMark.** Tables, blockquotes, nested lists, links: not rendered. The trade-off is that nothing in the rendered output can be XSS — every span is either escaped text or a fixed safe element.
+**Markdown subset, not full CommonMark.** Tables, blockquotes, nested lists, links: not rendered. The trade-off is that nothing in the rendered output can be XSS — every span is either escaped text or a fixed safe element, and citation links are limited to http(s) URLs.
 
 **Citation list is in-flight only.** Citations dispatched during a stream live on the assistant message. If you reload, they're gone unless you persist (see "no backend persistence" above).
 

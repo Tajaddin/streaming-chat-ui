@@ -44,3 +44,15 @@ export function tokenize(text: string): CitationSpan[] {
   if (cursor < text.length) out.push({ kind: "text", text: text.slice(cursor) });
   return out;
 }
+
+/** The citation URL if it is an absolute http(s) URL, otherwise undefined. */
+export function safeHref(href: string | undefined): string | undefined {
+  if (!href) return undefined;
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return undefined;
+  }
+  return url.protocol === "http:" || url.protocol === "https:" ? url.href : undefined;
+}
